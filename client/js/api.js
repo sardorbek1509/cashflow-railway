@@ -1,7 +1,7 @@
 /**
  * API Client Module - handles all REST calls to the server
  */
-const API_BASE = 'https://cashflow-railway.onrender.com/api';
+const API_BASE = window.API_BASE || 'https://your-railway-domain.up.railway.app/api';
 
 class ApiClient {
   constructor() {
@@ -19,73 +19,49 @@ class ApiClient {
   }
 
   async request(method, path, body = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+
     try {
-      const headers = {
-        'Content-Type': 'application/json'
-      };
-
-      if (this.token) {
-        headers['Authorization'] = `Bearer ${this.token}`;
-      }
-
-      const opts = {
-        method,
-        headers
-      };
-
-      if (body) {
-        opts.body = JSON.stringify(body);
-      }
-
       const res = await fetch(`${API_BASE}${path}`, opts);
 
       let data = null;
-
-      // JSON parse safe
       try {
         data = await res.json();
-      } catch (e) {
-        console.error('❌ JSON parse error:', e);
-        throw new Error('Serverdan noto‘g‘ri javob keldi');
+      } catch {
+        console.warn('⚠️ Server returned non-JSON response');
       }
 
-      // DEBUG (MUHIM)
       console.log(`📡 ${method} ${path}`, data);
 
       if (!res.ok) {
         const message = data?.message || 'Request failed';
-        console.error('❌ API ERROR:', message);
         const err = new Error(message);
         err.status = res.status;
         throw err;
       }
 
       return data;
-
-    } catch (error) {
-      console.error('🚨 REQUEST FAILED:', error);
-      throw error;
+    } catch (err) {
+      console.error('🚨 REQUEST FAILED:', err);
+      throw err;
     }
   }
 
-  // METHODS
-  get(path) {
-    return this.request('GET', path);
-  }
-
-  post(path, body) {
-    return this.request('POST', path, body);
-  }
+  // HTTP METHODS
+  get(path) { return this.request('GET', path); }
+  post(path, body) { return this.request('POST', path, body); }
 
   // AUTH
   register(username, email, password) {
     return this.post('/auth/register', { username, email, password });
   }
-
   login(email, password) {
     return this.post('/auth/login', { email, password });
   }
-
   getMe() {
     return this.get('/auth/me');
   }
@@ -94,18 +70,9 @@ class ApiClient {
   createRoom(maxPlayers = 4) {
     return this.post('/rooms', { maxPlayers });
   }
-
-  listRooms() {
-    return this.get('/rooms');
-  }
-
-  getRoom(roomId) {
-    return this.get(`/rooms/${roomId}`);
-  }
-
-  getRoomState(roomId) {
-    return this.get(`/rooms/${roomId}/state`);
-  }
+  listRooms() { return this.get('/rooms'); }
+  getRoom(roomId) { return this.get(`/rooms/${roomId}`); }
+  getRoomState(roomId) { return this.get(`/rooms/${roomId}/state`); }
 }
 
 // global
